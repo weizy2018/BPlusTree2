@@ -7,25 +7,32 @@
 
 #include "LRUCacheIndex.h"
 
-LRUCacheIndex * LRUCacheIndex::lruInst = nullptr;
+template<typename key, typename value>
+LRUCacheIndex<key, value> * LRUCacheIndex<key, value>::lruInst = nullptr;
 
-LRUCacheIndex::LRUCacheIndex() {
 
-	lruCache = new LruCache<unsigned long int, TreeNode*>(CACHE_SIZE);
+template<typename key, typename value>
+LRUCacheIndex<key, value>::LRUCacheIndex() {
+
+	lruCache = new LruCache<unsigned long int, TreeNode<key, value>*>(CACHE_SIZE);
 
 }
 
-LRUCacheIndex::~LRUCacheIndex() {
+template<typename key, typename value>
+LRUCacheIndex<key, value>::~LRUCacheIndex() {
 	delete lruCache;
 }
 
-LRUCacheIndex * LRUCacheIndex::getLruInst() {
+template<typename key, typename value>
+LRUCacheIndex<key, value> * LRUCacheIndex<key, value>::getLruInst() {
 	if (lruInst == nullptr) {
-		lruInst = new LRUCacheIndex();
+		lruInst = new LRUCacheIndex<key, value>();
 	}
 	return lruInst;
 }
-void LRUCacheIndex::releaseLruInst() {
+
+template<typename key, typename value>
+void LRUCacheIndex<key, value>::releaseLruInst() {
 	delete lruInst;
 }
 

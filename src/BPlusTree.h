@@ -12,14 +12,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <exception>
+#include <typeinfo>
 #include "tools/KeyNotFoundException.h"
-#include "tools/LRUCacheIndex.cpp"
+#include "tools/LRUCacheIndex.h"
 
 using namespace std;
 
 #define BLOCK_SIZE 				4*1024
-#define TREE_NODE_HEAD_SIZE		24
-#define TREE_NODE_DATA_SIZE 	(4*1024-24)
+#define TREE_NODE_HEAD_SIZE		16
+#define TREE_NODE_DATA_SIZE 	(4*1024-16)
 #define OFFSET_LENGTH			(2*sizeof(unsigned long int))
 
 template<typename key, typename value>
@@ -39,6 +40,9 @@ public:
 	void remove(key k);
 private:
 	TreeNode<key, value> * getLeafNode(key k);
+	TreeNode<key, value> * getParent(key k, value childId);
+	void split(TreeNode<key, value> *);
+
 private:
 	const char * indexFileName;
 	int keyLen;
@@ -63,10 +67,11 @@ private:
 	//----------------------------------------------------------------------
 	//块头的定义
 	unsigned long int self;		//本身在第几块
-	unsigned long int parent;	//该节点的父节点	-1表示根节点
+//	unsigned long int parent;	//该节点的父节点	-1表示根节点
 //	unsigned long int next;		//if(type==1) next为下一叶节点 0为内节点的下一节点 -1表示没有下一节点
 	int type;					//叶节点： type==1	非叶节点：type==0
 	unsigned int count;			//该块数据域中有多少个数据
+	int treeNodeMaxSize;		//块最大数据个数
 
 	int keyLen;					//key的长度
 	int valueLen;				//value的长度
@@ -74,21 +79,29 @@ private:
 
 	bool change;				//更改标志
 public:
-	TreeNode(int keyLen, int valueLen, unsigned long int self, unsigned long int parent, int type, const char * indexFileName);
+	TreeNode(int keyLen, int valueLen, unsigned long int self, int type, const char * indexFileName);
 	TreeNode(const char * block, int keyLen, int valueLen, const char * indexFileName);
 	~TreeNode();
 public:
 	unsigned long int getSelf();
 	unsigned long int getParent();
-//	unsigned long int getNext();
+	unsigned long int getNext();
+	void setNext(unsigned long int next);
 	int getType();
 	int getCount();
+	void setCount(int count);
+	void setChange(bool change);
+	bool getChange();
 	key getKey(int index);
 	value getValue(int index);
 public:
 	void addData(key k, value v);
+	void addInnerData(key, value);
+	void addFirstInnerData(value left, key k, value right);
 	int binarySearch(key k);
 	unsigned long int getNextChild(key k);
+	pair<key, value> splitData(TreeNode<key, value> * right);		//返回右边数据的个数
+private:
 
 public:
 	void parsed(const char * block);	//将从磁盘读取的块进行转换

@@ -9,21 +9,31 @@
 #define TOOLS_LRUCACHEINDEX_H_
 
 #include "lru.h"
-#include "../BPlusTree.h"
+//#include "../BPlusTree.h"
 
 #define CACHE_SIZE 10
 
+template<typename key, typename value>
+class BPlusTree;
+
+template<typename key, typename value>
+class TreeNode;
+
+template<typename key, typename value>
 class LRUCacheIndex {
 public:
 	static LRUCacheIndex * getLruInst();
 	static void releaseLruInst();
-	LruCache<unsigned long int, TreeNode*> * getLruCache();
+
+	LruCache<unsigned long int, TreeNode<key, value>*> * getLruCache();
 private:
-	LRUCacheIndex();
+	LRUCacheIndex();					//单例模式
 	static LRUCacheIndex * lruInst;
-	LruCache<unsigned long int, TreeNode*> * lruCache;
+
+	LruCache<unsigned long int, TreeNode<key, value>*> * lruCache;
 public:
 	virtual ~LRUCacheIndex();
 };
+
 
 #endif /* TOOLS_LRUCACHEINDEX_H_ */

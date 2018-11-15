@@ -19,9 +19,9 @@ KeyNotFoundException::~KeyNotFoundException() {
 	// TODO Auto-generated destructor stub
 }
 
-const char * KeyNotFoundException::what() const {
-	message = "KeyNotFoundException:" + message + " not found";
-	return message.c_str();
+const char * KeyNotFoundException::what() const throw() {
+	string error = "KeyNotFoundException: " + message + " not found";
+	return error.c_str();
 }
 
 //------------------------------------------
