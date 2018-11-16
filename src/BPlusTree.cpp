@@ -80,17 +80,11 @@ void BPlusTree<key, value>::put(key k, value v) {
 	//找到应该包含k值的叶结点
 	TreeNode<key, value> * leafNode = getLeafNode(k);
 	//往叶结点中插入数据k，v
-	leafNode->addData(k, v);	//已经实现
+	leafNode->addData(k, v);
 	if (leafNode->getCount() >= treeNodeMaxSize) {
 		//分裂
 		split(leafNode);
 	}
-
-	//分裂的时候考虑TreeNode中的change,新建的结点中change应该置为真
-
-
-	//判断插入后是否满了
-
 
 }
 template<typename key, typename value>
@@ -116,22 +110,26 @@ void BPlusTree<key, value>::split(TreeNode<key, value> * leafNode) {
 		rootNode->setCount(0);
 		rootNode->setSelf(totalBlock);
 		rootNode->setType(0);
+		//rootNode->addData(p.first, p.second);
 		rootNode->addFirstInnerData(leafNode->getSelf(), p.first, p.second);
-//		rootNode->addData(p.first, p.second);
+
 		//更新索引文件头部信息
 		totalBlock++;									//总块数
 		root = rootNode->getSelf();						//根结点的位置
+		rootNode->writeBack();							//把跟结点写回磁盘
 		return;
 	}
-	parentNode->addData(p.first, p.second);
+	//根结点为非内节点
+	parentNode->addInnerData(p.first, p.second);
 
 	while (parentNode->getCount() >= treeNodeMaxSize) {
 		if (parentNode->getSelf() == rootNode->getSelf()) {	//分裂的结点为根结点
 			rootNode->setCount(0);
 			rootNode->setSelf(totalBlock);
 			rootNode->setType(0);
+			//rootNode->addData(p.first, p.second);
 			rootNode->addFirstInnerData(leafNode->getSelf(), p.first, p.second);
-//			rootNode->addData(p.first, p.second);
+
 			//更新索引文件头部信息
 			totalBlock++;									//总块数
 			root = rootNode->getSelf();						//根结点的位置
@@ -140,8 +138,8 @@ void BPlusTree<key, value>::split(TreeNode<key, value> * leafNode) {
 			self = totalBlock;
 			totalBlock++;
 			TreeNode<key, value> * rightInnerNode = new TreeNode<key, value>(keyLen, valueLen, self, 0, indexFileName);
-			pair<key, value> inner = parentNode->splitData(rightInnerNode);
-			//---------放入LRU缓冲区中
+			pair<key, value> inner = parentNode->splitInnerData(rightInnerNode);
+			//---------放入LRU缓冲区中---------
 			t = LRUCacheIndex<key, value>::getLruInst()->getLruCache()->put(parentNode->getSelf(), parentNode);
 			if (t) {
 				delete t;
@@ -151,11 +149,10 @@ void BPlusTree<key, value>::split(TreeNode<key, value> * leafNode) {
 				delete t;
 			}
 
-			parentNode = getParent()
+			parentNode = getParent(parentNode->getKey(0), parentNode->getSelf());
+			parentNode->addInnerData(p.first, p.second);
 		}
 	}
-
-
 }
 
 template<typename key, typename value>
@@ -424,7 +421,7 @@ void TreeNode<key, value>::addFirstInnerData(value left, key k, value right) {
 	}
 	d += keyLen;
 	memcpy(d, (char*)&right, valueLen);
-	count++;
+	count = 1;
 	change = true;
 }
 
@@ -492,7 +489,10 @@ void TreeNode<key,value>::writeBack() {
 
 	fclose(indexFile);
 }
-
+template<typename key, typename value>
+char * TreeNode<key, value>::getData() {
+	return data;
+}
 template<typename key, typename value>
 unsigned long int TreeNode<key,value>::getSelf() {
 	return self;
@@ -594,7 +594,7 @@ unsigned long int TreeNode<key, value>::getNextChild(key k) {
  */
 template<typename key, typename value>
 pair<key, value> TreeNode<key, value>::splitData(TreeNode<key, value> * right) {
-	char * rightData = right->data;
+	char * rightData = right->getData();
 	unsigned long int next = this->getNext();
 
 	int leftCount = count/2;
@@ -602,7 +602,9 @@ pair<key, value> TreeNode<key, value>::splitData(TreeNode<key, value> * right) {
 	char * d = data + leftCount*len;
 	memcpy(rightData, d, (count-leftCount)*len);	//将原有数据复制一半到新的结点中
 
-	count = leftCount;								//更新左边数据的个数
+	right->setCount(count-leftCount);				//跟新右边数据的个数  先
+	count = leftCount;								//更新左边数据的个数  后
+
 	right->setNext(next);							//右边部分的next应该是原有数据的next
 	this->setNext(right->getSelf());				//左边部分的next应该指向新的结点
 
@@ -612,6 +614,30 @@ pair<key, value> TreeNode<key, value>::splitData(TreeNode<key, value> * right) {
 
 	this->setChange(true);
 	right->setChange(true);
+
+	return p;
+}
+/**
+ *非叶结点分裂
+ */
+template<typename key, typename value>
+pair<key, value> TreeNode<key, value>::splitInnetData(TreeNode<key, value> * right) {
+	char * rightData = right->getData();
+
+	pair<key, value> p;
+	p.fist = this->getKey(count/2);
+	p.second = right->getSelf();
+
+	int leftCount = count/2;
+	int len = keyLen + valueLen;
+
+	char * leftData = data + valueLen + len*leftCount + keyLen;
+	memcpy(rightData, leftData, valueLen);
+	leftData += valueLen;
+	memcpy(rightData, leftData, len*(count-leftCount-1));
+
+	right->setCount(count-leftCount);
+	this->count = leftCount;
 
 	return p;
 }

@@ -83,6 +83,7 @@ public:
 	TreeNode(const char * block, int keyLen, int valueLen, const char * indexFileName);
 	~TreeNode();
 public:
+	char * getData();
 	unsigned long int getSelf();
 	unsigned long int getParent();
 	unsigned long int getNext();
@@ -100,7 +101,8 @@ public:
 	void addFirstInnerData(value left, key k, value right);
 	int binarySearch(key k);
 	unsigned long int getNextChild(key k);
-	pair<key, value> splitData(TreeNode<key, value> * right);		//返回右边数据的个数
+	pair<key, value> splitData(TreeNode<key, value> * right);		//叶结点分裂  返回右边数据的个数
+	pair<key, value> splitInnetData(TreeNode<key, value> * right);	//非叶结点分裂
 private:
 
 public:
