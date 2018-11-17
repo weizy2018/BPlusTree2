@@ -43,8 +43,11 @@ private:
 	TreeNode<key, value> * getParent(key k, value childId);
 	void split(TreeNode<key, value> *);
 	void handleDel(TreeNode<key, value> * leafNode, key k, value v);
-	TreeNode<key, value> * getLeftNode(TreeNode<key, value> * node, key k, value v);
-	TreeNode<key, value> * getRightNode(TreeNode<key, value> * node, key k, value v);
+	TreeNode<key, value> * getLeftNode(TreeNode<key, value> * node, key k, value v, TreeNode<key, value> *);
+	TreeNode<key, value> * getRightNode(TreeNode<key, value> * node, key k, value v, TreeNode<key, value> *);
+	void borrowLeft(TreeNode<key, value> * leftNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent);
+	void borrowRight(TreeNode<key, value> * rightNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent);
+
 private:
 	const char * indexFileName;
 	int keyLen;
@@ -106,6 +109,8 @@ public:
 	unsigned long int getNextChild(key k);
 	pair<key, value> splitData(TreeNode<key, value> * right);		//叶结点分裂  返回右边数据的个数
 	pair<key, value> splitInnetData(TreeNode<key, value> * right);	//非叶结点分裂
+	void moveRight(TreeNode<key, value> * leftNode);				//整体右移一位
+	void updataKey(key k, value v);		//将值为v的项的索引置为k
 private:
 
 public:

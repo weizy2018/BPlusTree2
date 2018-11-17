@@ -111,18 +111,49 @@ void BPlusTree<key, value>::handleDel(TreeNode<key, value> * leafNode, key k, va
 	if (leafNode->getSelf() == rootNode->getSelf()) {	//只有根结点，就算再少也不作处理了
 		return;
 	}
+	int minLeafData = (int)((treeNodeMaxSize - 1)*1.0 / 2 + 0.5);
+	int minInnerData = (int)(treeNodeMaxSize*1.0 / 2 + 0.5);
+	//父结点
+	TreeNode<key, value> * parent = this->getParent(k, v);
+	if (parent->getSelf() == leafNode->getSelf()) {		//只有一个结点
+		return;
+	}
 	//leafNode的左兄弟结点
-
+	TreeNode<key, value> * leftNode = getLeftNode(leafNode, k, v);
 	//leafNode的右兄弟结点
+	TreeNode<key, value> * rightNode = getRightNode(leafNode, k, v);
 
-	TreeNode<key, value> * parent = this->getParent(k ,v);
 
+	if (leafNode != nullptr && leftNode->getCount() > minLeafData) {	//先看能否向左借
+		borrowLeft(leftNode, leafNode, parent);
+
+	} else if (rightNode != nullptr && rightNode->getCount() > minLeafData) {	//是否能向右借
+		borrowRight(right, leafNode, parent);
+	} else {
+
+	}
+}
+
+template<typename key, typename value>
+void BPlusTree<key, value>::borrowLeft(TreeNode<key, value> * leftNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent){
+	//leafNode整体右窜一位,并将left中的数据的最后一项加到leafNode中
+	leafNode->moveRight(leftNode);
+	//修改parent中的索引
+	//1. 先获取移动后的leafNode的第一项的索引
+	key k = leafNode->getKey(0);
+	//2. 将父结点value值为leafNode->getSelf()的项的索引置为k
+	parent->updataKey(k, leafNode->getSelf());
+}
+template<typename key, typename value>
+void BPlusTree<key, value>::borrowRight(TreeNode<key, value> * rightNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent) {
 
 }
 template<typename key, typename value>
-TreeNode<key, value> * BPlusTree<key, value>::getLeftNode(TreeNode<key, value> * node, key k, value v) {
-	TreeNode<key, value> * parent = this->getParent(k, v);
-	if (parent->getValue(0) == v) {		//node没有左兄弟结点
+TreeNode<key, value> * BPlusTree<key, value>::getLeftNode(TreeNode<key, value> * node, key k, value v, TreeNode<key, value> * parent) {
+//	if (parent->getSelf() == rootNode->getSelf()) {		//只有一个叶结点，也是根结点
+//		return nullptr;
+//	}
+	if (parent->getValue(0) == v) {						//node没有左兄弟结点
 		return nullptr;
 	}
 	unsigned long int leftNodeAddr;
@@ -157,23 +188,21 @@ TreeNode<key, value> * BPlusTree<key, value>::getLeftNode(TreeNode<key, value> *
 	return leftNode;
 }
 template<typename key, typename value>
-TreeNode<key, value> * BPlusTree<key, value>::getRightNode(TreeNode<key, value> * node, key k, value v) {
+TreeNode<key, value> * BPlusTree<key, value>::getRightNode(TreeNode<key, value> * node, key k, value v, TreeNode<key, value> * parent) {
 	TreeNode<key, value> * rightNode = nullptr;
 	unsigned long int rightNodeAddr;
+//	if (node->getSelf() == rootNode->getSelf()) {		//只有一个叶结点，也是根结点
+//		return nullptr;
+//	}
 	//获取rightNodeAddr
-	if (node->getType() == 1) {	//叶结点
-		rightNodeAddr = node->getNext();
-	} else {	//非叶结点
-		TreeNode<key, value> * parent = this->getParent(k, v);
-		for (int index = 0; index <= parent->getCount(); index++) {
-			value vv = parent->getValue(index);
-			if (vv == v) {
-				if (index == parent->getCount()) {		//没有右兄弟结点
-					return nullptr;
-				}
-				rightNodeAddr = parent->getValue(index + 1);
-				break;
+	for (int index = 0; index <= parent->getCount(); index++) {
+		value vv = parent->getValue(index);
+		if (vv == v) {
+			if (index == parent->getCount()) {		//没有右兄弟结点
+				return nullptr;
 			}
+			rightNodeAddr = parent->getValue(index + 1);
+			break;
 		}
 	}
 	//从rightNodeAddr中获取结点TreeNode
@@ -775,6 +804,54 @@ pair<key, value> TreeNode<key, value>::splitInnetData(TreeNode<key, value> * rig
 	this->count = leftCount;
 
 	return p;
+}
+/**
+ * 数据整体右移一位
+ */
+template<typename key, typename value>
+void TreeNode<key, value>::moveRight(TreeNode<key, value> * leftNode) {
+	int len = keyLen + valueLen;
+	char * d1 = data + len*count;
+	char * d0 = d1 - len;
+	//d0 >>> d1
+	for (int i = 0; i < count; i++) {
+		memmove(d1, d0, len);
+	}
+	char * leftData = leftNode->getData();
+	int leftCount = leftNode->getCount();
+	//左边结点最右边的一项数据
+	char * left = leftData + len*(leftCount - 1);
+	d0 = data;
+	memcpy(d0, left, len);
+
+	//改变数据的个数
+	leftNode->setCount(leftCount - 1);
+	count++;
+}
+/**
+ * 将值为v的项的索引置为k
+ */
+template<typename key, typename value>
+void TreeNode<key, value>::updataKey(key k, value v) {
+	int n = 0;
+	while(n <= count && this->getValue(n) != v) {
+		n++;
+	}
+	int len = keyLen + valueLen;
+	char * d = data + len*(n - 1) + valueLen;
+	//替换k
+	string str = typeid(string).name();
+	if (typeid(key).name() == str) {
+		char * kk = (char*)malloc(keyLen);
+		char * a = k.c_str();
+		memcpy(kk, a, k.size());
+		kk[k.size()] = '\0';
+		memcpy(d, kk, keyLen);
+		free(kk);
+		free(a);
+	} else {
+		memcpy(d, (char*)&k, keyLen);
+	}
 }
 //叶结点的下一个结点
 template<typename key, typename value>
