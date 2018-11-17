@@ -4,7 +4,6 @@
  *  Created on: Nov 13, 2018
  *      Author: weizy
  */
-
 #include "BPlusTree.h"
 
 template<typename key, typename value>
@@ -74,7 +73,9 @@ void BPlusTree<key, value>::createIndex() {
 	rootNode->writeBack();
 
 }
-
+/**
+ * 插入结点
+ */
 template<typename key, typename value>
 void BPlusTree<key, value>::put(key k, value v) {
 	//找到应该包含k值的叶结点
@@ -86,6 +87,115 @@ void BPlusTree<key, value>::put(key k, value v) {
 		split(leafNode);
 	}
 
+}
+/**
+ * 删除结点
+ */
+template<typename key, typename value>
+void BPlusTree<key, value>::remove(key k, value v) {
+	TreeNode<key, value> * leafNode = getLeafNode(k);
+	try {
+		leafNode->delData(k, v);
+	} catch (exception & e) {
+		//KeyNotFoundException
+		return;
+	}
+	int minLeafData = (int)((treeNodeMaxSize - 1)*1.0 / 2 + 0.5);	//向上取整 等价于ceil((treeNodeMaxSize-1))/2
+	if (leafNode->getCount() < minLeafData) {
+		handleDel(leafNode, k, v);
+	}
+}
+
+template<typename key, typename value>
+void BPlusTree<key, value>::handleDel(TreeNode<key, value> * leafNode, key k, value v) {
+	if (leafNode->getSelf() == rootNode->getSelf()) {	//只有根结点，就算再少也不作处理了
+		return;
+	}
+	//leafNode的左兄弟结点
+
+	//leafNode的右兄弟结点
+
+	TreeNode<key, value> * parent = this->getParent(k ,v);
+
+
+}
+template<typename key, typename value>
+TreeNode<key, value> * BPlusTree<key, value>::getLeftNode(TreeNode<key, value> * node, key k, value v) {
+	TreeNode<key, value> * parent = this->getParent(k, v);
+	if (parent->getValue(0) == v) {		//node没有左兄弟结点
+		return nullptr;
+	}
+	unsigned long int leftNodeAddr;
+	for (int index = 1; index < parent->getCount(); index++) {
+		value vv = parent->getValue(index);
+		if (vv == v) {
+			leftNodeAddr = parent->getValue(index-1);
+			break;
+		}
+	}
+
+	FILE * indexFile;
+	if ((indexFile = fopen(indexFileName, "rb")) == NULL) {
+		throw FileNotFoundException(indexFileName);
+	}
+	TreeNode<key, value> * leftNode = nullptr;
+	try {
+		leftNode = LRUCacheIndex<key, value>::getLruInst()->getLruCache()->get(leftNodeAddr);
+	} catch (exception & e) {
+		char * block = (char*)malloc(BLOCK_SIZE);
+		fseek(indexFile, leftNodeAddr*BLOCK_SIZE + OFFSET_LENGTH, SEEK_SET);
+		fread(block, BLOCK_SIZE, 1, indexFile);
+		leftNode = new TreeNode<key, value>(block, valueLen, indexFileName);
+		free(block);
+
+		TreeNode<key, value> * t = LRUCacheIndex<key, value>::getLruInst()->getLruCache()->put(leftNodeAddr, leftNode);
+		if (t) {
+			delete t;
+		}
+	}
+	fclose(indexFile);
+	return leftNode;
+}
+template<typename key, typename value>
+TreeNode<key, value> * BPlusTree<key, value>::getRightNode(TreeNode<key, value> * node, key k, value v) {
+	TreeNode<key, value> * rightNode = nullptr;
+	unsigned long int rightNodeAddr;
+	//获取rightNodeAddr
+	if (node->getType() == 1) {	//叶结点
+		rightNodeAddr = node->getNext();
+	} else {	//非叶结点
+		TreeNode<key, value> * parent = this->getParent(k, v);
+		for (int index = 0; index <= parent->getCount(); index++) {
+			value vv = parent->getValue(index);
+			if (vv == v) {
+				if (index == parent->getCount()) {		//没有右兄弟结点
+					return nullptr;
+				}
+				rightNodeAddr = parent->getValue(index + 1);
+				break;
+			}
+		}
+	}
+	//从rightNodeAddr中获取结点TreeNode
+	FILE * indexFile;
+	if ((indexFile = fopen(indexFileName, "rb")) == NULL) {
+		throw FileNotFoundException(indexFileName);
+	}
+	try {
+		rightNode = LRUCacheIndex<key, value>::getLruInst()->getLruCache()->get(rightNodeAddr);
+	} catch (exception & e) {
+		char * block = (char*) malloc(BLOCK_SIZE);
+		fseek(indexFile, rightNodeAddr * BLOCK_SIZE + OFFSET_LENGTH, SEEK_SET);
+		fread(block, BLOCK_SIZE, 1, indexFile);
+		rightNode = new TreeNode<key, value>(block, valueLen, indexFileName);
+		free(block);
+
+		TreeNode<key, value> * t = LRUCacheIndex<key, value>::getLruInst()->getLruCache()->put(rightNodeAddr, rightNode);
+		if (t) {
+			delete t;
+		}
+	}
+	return rightNode;
 }
 template<typename key, typename value>
 void BPlusTree<key, value>::split(TreeNode<key, value> * leafNode) {
@@ -359,6 +469,31 @@ void TreeNode<key, value>::addData(key k, value v) {
 		}
 	}
 	count++;
+	change = true;
+}
+template<typename key, typename value>
+void TreeNode<key, value>::delData(key k, value v) {
+	char * d = data;
+	int index = 0;
+	while(index<count && getKey(index) != k) {
+		index++;
+	}
+	//没找到
+	if (index >= count) {
+		throw KeyNotFoundException(k);
+	}
+	int len = keyLen + valueLen;
+	if (index == (count - 1)) {
+		count--;
+	} else {
+		char * d0 = data + len*index;
+		char * d1 = d0 + len;
+		for (int i = index; i < count; i++) {
+			memmove(d0, d1, len);
+			d0 += len;
+			d1 += len;
+		}
+	}
 	change = true;
 }
 template<typename key, typename value>

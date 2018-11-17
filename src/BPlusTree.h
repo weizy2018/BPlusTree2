@@ -35,14 +35,16 @@ public:
 	void init();					//用于初始化文件中已经存在了的b+树
 	void createIndex();				//发布create index后用于初始化b+树
 	void put(key k, value v);
-	value get(key k);	//应该是undigned long int的，但是因为找不到的时候返回-1，索引只能是有符号的整数了
-							//后期可改为抛出异常进行处理
-	void remove(key k);
+	value get(key k);				//应该是undigned long int的，但是因为找不到的时候返回-1，索引只能是有符号的整数了
+									//后期可改为抛出异常进行处理
+	void remove(key k, value v);
 private:
 	TreeNode<key, value> * getLeafNode(key k);
 	TreeNode<key, value> * getParent(key k, value childId);
 	void split(TreeNode<key, value> *);
-
+	void handleDel(TreeNode<key, value> * leafNode, key k, value v);
+	TreeNode<key, value> * getLeftNode(TreeNode<key, value> * node, key k, value v);
+	TreeNode<key, value> * getRightNode(TreeNode<key, value> * node, key k, value v);
 private:
 	const char * indexFileName;
 	int keyLen;
@@ -85,7 +87,7 @@ public:
 public:
 	char * getData();
 	unsigned long int getSelf();
-	unsigned long int getParent();
+//	unsigned long int getParent();
 	unsigned long int getNext();
 	void setNext(unsigned long int next);
 	int getType();
@@ -97,6 +99,7 @@ public:
 	value getValue(int index);
 public:
 	void addData(key k, value v);
+	void delData(key k, value v);
 	void addInnerData(key, value);
 	void addFirstInnerData(value left, key k, value right);
 	int binarySearch(key k);
