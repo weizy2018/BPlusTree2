@@ -124,14 +124,60 @@ void BPlusTree<key, value>::handleDel(TreeNode<key, value> * leafNode, key k, va
 	TreeNode<key, value> * rightNode = getRightNode(leafNode, k, v);
 
 
-	if (leafNode != nullptr && leftNode->getCount() > minLeafData) {	//先看能否向左借
+	if (leftNode != nullptr && leftNode->getCount() > minLeafData) {	//先看能否向左借
 		borrowLeft(leftNode, leafNode, parent);
 
 	} else if (rightNode != nullptr && rightNode->getCount() > minLeafData) {	//是否能向右借
 		borrowRight(right, leafNode, parent);
-	} else {
+	} else if(leftNode != nullptr) {	//左右都不能借了，如果左边不为空，向左边合并
+
+	} else {	//只能向右边合并
 
 	}
+}
+/**
+ * 向左边合并
+ */
+template<typename key, typename value>
+void BPlusTree<key, value>::mergeLeft(TreeNode<key, value> * leftNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent) {
+	//1. 把父结点value为leafNode->self()的项删除
+	parent->delInnerData(leafNode->self());
+
+	//2. 合并结点 将leafNode合并到leftNode中
+	leftNode->addRightNodeData(leafNode);
+
+	//3. 把文件中的最后一项用来填补被合并的结点，并将其父结点关于该项的value改为当前值，totalBlock - 1
+	TreeNode<key, value> * lastNode = getLastTreeNode(totalBlock);
+	//填补。。。
+
+
+	//4. 递归进行该过程。。。
+}
+/**
+ * 向右边合并
+ */
+template<typename key, typename value>
+void BPlusTree<key, value>::mergeRight(TreeNode<key, value> * rightNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent) {
+	//需要找到leafNode的左兄弟结点
+}
+/**
+ * 获取索引文件的最后一块
+ */
+template<typename key, typename value>
+TreeNode<key, value> * BPlusTree<key, value>::getLastTreeNode(unsigned long int totalBlock) {
+	//rootNode为第0块
+	//需要直接从磁盘中读取
+	FILE * indexFile;
+	if ((indexFile = fopen(indexFileName, "rb")) == NULL) {
+		throw FileNotFoundException(string(indexFileName));
+	}
+	fseek(indexFile, (totalBlock - 1)*BLOCK_SIZE + OFFSET_LENGTH, SEEK_SET);
+	char * block = (char*)malloc(BLOCK_SIZE);
+	fread(block, BLOCK_SIZE, 1, indexFile);
+	fclose(indexFile);
+	//const char * block, int keyLen, int valueLen, const char * indexFileName
+	TreeNode<key, value> * lastNode = new TreeNode<key, value>(block, keyLen, valueLen, indexFileName);
+	return lastNode;
 }
 
 template<typename key, typename value>
@@ -146,7 +192,13 @@ void BPlusTree<key, value>::borrowLeft(TreeNode<key, value> * leftNode, TreeNode
 }
 template<typename key, typename value>
 void BPlusTree<key, value>::borrowRight(TreeNode<key, value> * rightNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent) {
-
+	//leafNode整体向左移一位，并将rightNode中的第一项加到leafNode的尾部
+	leafNode->moveLeft(rightNode);
+	//修改parent中的索引
+	//1. 获取右边结点的第一项的索引
+	key k = rightNode->getKey(0);
+	//2. 将父结点value值为rightNode->self(0的项的索引置为k
+	parent->updataKey(k, rightNode->getSelf());
 }
 template<typename key, typename value>
 TreeNode<key, value> * BPlusTree<key, value>::getLeftNode(TreeNode<key, value> * node, key k, value v, TreeNode<key, value> * parent) {
@@ -500,6 +552,9 @@ void TreeNode<key, value>::addData(key k, value v) {
 	count++;
 	change = true;
 }
+/**
+ * 将键值为k的项删除（叶结点）
+ */
 template<typename key, typename value>
 void TreeNode<key, value>::delData(key k, value v) {
 	char * d = data;
@@ -523,6 +578,38 @@ void TreeNode<key, value>::delData(key k, value v) {
 			d1 += len;
 		}
 	}
+	change = true;
+}
+/**
+ * 将value为v的项删除（外结点）
+ */
+template<typename key, typename value>
+void TreeNode<key, value>::delInnerData(value v) {
+	char * d = data;
+	int len = keyLen + valueLen;
+	int index = 0;
+	while (index <= count && getValue(index) != v) {
+		index++;
+	}
+	if (index > count) {
+		throw range_error("range out of index");
+	}
+	char * d0, *d1;
+	//定位
+	if (index == 0) {
+		d0 = data;
+		d1 = data + len;
+	} else {
+		d0 = data + len*index - keyLen;
+		d1 = d0 + len;
+	}
+	//移动
+	for (int i = index; i < count; i++) {
+		memmove(d0, d1, len);
+		d0 += len;
+		d1 += len;
+	}
+	count--;
 	change = true;
 }
 template<typename key, typename value>
@@ -588,7 +675,58 @@ void TreeNode<key, value>::addFirstInnerData(value left, key k, value right) {
 	count = 1;
 	change = true;
 }
+/**
+ * 将右边的结点合并到自个身上,*****注意：如果是叶结点的话应该把相应的链接叶要复制
+ */
+template<typename key, typename value>
+void TreeNode<key,value>::addRightNodeData(TreeNode<key, value> * rightNode) {
+	int len = keyLen + valueLen;
+	char * leftData = data + len*count;
+	char * rightData = rightNode->getData();
+	int rightCount = rightNode->getCount();
 
+	int rightDataLen = rightCount*len;
+	memcpy(leftData, rightData, rightDataLen);
+
+	//设置数目
+	count += rightCount;
+
+	//设置叶结点的链接
+	if (type == 1) {
+		unsigned long int rightNodeNext = rightNode->getNext();
+		this->setNext(rightNodeNext);
+	}
+	change = true;
+}
+/**
+ * 将左边的结点合并到自个身上,右边的数据需要移动
+ */
+template<typename key, typename value>
+void TreeNode<key,value>::addLeftNodeData(TreeNode<key, value> * leftNode, TreeNode<key, value> * leftLeftNode) {
+	int len = keyLen + valueLen;
+	int leftCount = leftNode->getCount();
+	//自身数据右移leftCount个单位
+	char * d0 = data + len*(count - 1);
+	char * d1 = d0 + len*leftCount;
+	//自身右移
+	for (int i = 0; i < count; i++) {
+		memmove(d1, d0, len);
+		d0 -= len;
+		d1 -= len;
+	}
+
+	//添加leftNode的数据
+	char * rightData = data;
+	char * leftData = leftNode->getData();
+	memcpy(rightData, leftData, leftCount*len);
+
+	//设置左左边的next
+	leftLeftNode->setNext(self);
+	leftLeftNode->setChange(true);
+
+	count += leftCount;
+	change = true;
+}
 template<typename key, typename value>
 void TreeNode<key,value>::parsed(const char * block) {
 	const char * b;
@@ -806,7 +944,7 @@ pair<key, value> TreeNode<key, value>::splitInnetData(TreeNode<key, value> * rig
 	return p;
 }
 /**
- * 数据整体右移一位
+ * 从左边结点（leftNode)移动一位数据到右边
  */
 template<typename key, typename value>
 void TreeNode<key, value>::moveRight(TreeNode<key, value> * leftNode) {
@@ -816,6 +954,8 @@ void TreeNode<key, value>::moveRight(TreeNode<key, value> * leftNode) {
 	//d0 >>> d1
 	for (int i = 0; i < count; i++) {
 		memmove(d1, d0, len);
+		d0 -= len;
+		d1 -= len;
 	}
 	char * leftData = leftNode->getData();
 	int leftCount = leftNode->getCount();
@@ -827,6 +967,36 @@ void TreeNode<key, value>::moveRight(TreeNode<key, value> * leftNode) {
 	//改变数据的个数
 	leftNode->setCount(leftCount - 1);
 	count++;
+	//改动标志
+	change = true;
+	leftNode->setChange(true);
+}
+/**
+ * 从右边结点（rightNode）移动一位数据到左边
+ */
+template<typename key, typename value>
+void TreeNode<key, value>::moveLeft(TreeNode<key, value> * rightNode) {
+	int len = keyLen + valueLen;
+	char * d = data + len*count;
+	char * rightData = rightNode->getData();
+	//移动数据
+	memcpy(d, rightData, len);
+
+	//右边结点整体左移一位
+	char * d0 = rightData;
+	char * d1 = rightData + len;
+	int rightCount = rightNode->getCount();
+	for (int i = 0; i < rightCount - 1; i++) {
+		memmove(d0, d1, len);
+		d0 += len;
+		d1 += len;
+	}
+	//改变两结点数据个数
+	count += 1;
+	rightNode->setCount(rightCount - 1);
+	//改动标志
+	change = true;
+	rightNode->setChange(true);
 }
 /**
  * 将值为v的项的索引置为k

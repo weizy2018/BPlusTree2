@@ -47,7 +47,9 @@ private:
 	TreeNode<key, value> * getRightNode(TreeNode<key, value> * node, key k, value v, TreeNode<key, value> *);
 	void borrowLeft(TreeNode<key, value> * leftNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent);
 	void borrowRight(TreeNode<key, value> * rightNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent);
-
+	void mergeLeft(TreeNode<key, value> * leftNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent);
+	void mergeRight(TreeNode<key, value> * rightNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent);
+	TreeNode<key, value> * getLastTreeNode(unsigned long int totalBlock);
 private:
 	const char * indexFileName;
 	int keyLen;
@@ -102,14 +104,18 @@ public:
 	value getValue(int index);
 public:
 	void addData(key k, value v);
-	void delData(key k, value v);
+	void delData(key k, value v);			//将键值为k的项删除（叶结点）
+	void delInnerData(value v);				//将值为v的项删除
 	void addInnerData(key, value);
+	void addRightNodeData(TreeNode<key, value> * rightNode);	//将右边的结点合并到自个身上
+	void addLeftNodeData(TreeNode<key, value> * leftNode, TreeNode<key, value> * leftLeftNode);		//将左边的结点合并到自个身上
 	void addFirstInnerData(value left, key k, value right);
 	int binarySearch(key k);
 	unsigned long int getNextChild(key k);
 	pair<key, value> splitData(TreeNode<key, value> * right);		//叶结点分裂  返回右边数据的个数
 	pair<key, value> splitInnetData(TreeNode<key, value> * right);	//非叶结点分裂
-	void moveRight(TreeNode<key, value> * leftNode);				//整体右移一位
+	void moveRight(TreeNode<key, value> * leftNode);				//从左边结点移动一位数据到右边
+	void moveLeft(TreeNode<key, value> * rightNode);				//从右边结点移动一位数据到左边
 	void updataKey(key k, value v);		//将值为v的项的索引置为k
 private:
 
