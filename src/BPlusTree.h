@@ -42,9 +42,10 @@ private:
 	TreeNode<key, value> * getLeafNode(key k);
 	TreeNode<key, value> * getParent(key k, value childId);
 	void split(TreeNode<key, value> *);
-	void handleDel(TreeNode<key, value> * leafNode, key k, value v);
-	TreeNode<key, value> * getLeftNode(TreeNode<key, value> * node, key k, value v, TreeNode<key, value> *);
-	TreeNode<key, value> * getRightNode(TreeNode<key, value> * node, key k, value v, TreeNode<key, value> *);
+	void handleDel(TreeNode<key, value> * leafNode);
+	TreeNode<key, value> * getLeftNode(TreeNode<key, value> * node, TreeNode<key, value> * parent);
+	TreeNode<key, value> * getLeftNodeAll(TreeNode<key, value> * node, TreeNode<key, value> * parent);
+	TreeNode<key, value> * getRightNode(TreeNode<key, value> * node, TreeNode<key, value> *);
 	void borrowLeft(TreeNode<key, value> * leftNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent);
 	void borrowRight(TreeNode<key, value> * rightNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent);
 	void mergeLeft(TreeNode<key, value> * leftNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent);
@@ -61,6 +62,8 @@ private:
 
 	//rootNode
 	TreeNode<key, value> * rootNode;
+private:
+	TreeNode<key, value> * getRootNode();
 
 };
 
@@ -107,11 +110,15 @@ public:
 	void delData(key k, value v);			//将键值为k的项删除（叶结点）
 	key delInnerData(value v);				//将值为v的项删除
 	void addInnerData(key, value);
+
 	void addRightNodeData(TreeNode<key, value> * rightNode);	//将右边的结点合并到自个身上
-	void addRightNodeData_Inner(TreeNode<key, value> * rightNode, key k);
 	void addLeftNodeData(TreeNode<key, value> * leftNode, TreeNode<key, value> * leftLeftNode);	//将左边的结点合并到自个身上
+
+	void addRightNodeData_Inner(TreeNode<key, value> * rightNode, key k);
 	void addLeftNodeData_Inner(TreeNode<key, value> * leftNode, key k);
+
 	void addFirstInnerData(value left, key k, value right);
+
 	int binarySearch(key k);
 	unsigned long int getNextChild(key k);
 	pair<key, value> splitData(TreeNode<key, value> * right);		//叶结点分裂  返回右边数据的个数
