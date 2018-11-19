@@ -461,9 +461,9 @@ void BPlusTree<key, value>::borrowLeft(TreeNode<key, value> * leftNode, TreeNode
 	parent->updataKey(k, node->getSelf());
 }
 template<typename key, typename value>
-void BPlusTree<key, value>::borrowRight(TreeNode<key, value> * rightNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent) {
+void BPlusTree<key, value>::borrowRight(TreeNode<key, value> * rightNode, TreeNode<key, value> * node, TreeNode<key, value> * parent) {
 	//将rightNode中的第一项加到leafNode的尾部
-	leafNode->moveLeft(rightNode);
+	node->moveLeft(rightNode);
 	//修改parent中的索引
 	//1. 获取右边结点的第一项的索引
 	key k = rightNode->getKey(0);

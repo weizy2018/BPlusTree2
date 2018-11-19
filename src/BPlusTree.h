@@ -46,8 +46,8 @@ private:
 	TreeNode<key, value> * getLeftNode(TreeNode<key, value> * node, TreeNode<key, value> * parent);
 	TreeNode<key, value> * getLeftNodeAll(TreeNode<key, value> * node, TreeNode<key, value> * parent);
 	TreeNode<key, value> * getRightNode(TreeNode<key, value> * node, TreeNode<key, value> *);
-	void borrowLeft(TreeNode<key, value> * leftNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent);
-	void borrowRight(TreeNode<key, value> * rightNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent);
+	void borrowLeft(TreeNode<key, value> * leftNode, TreeNode<key, value> * node, TreeNode<key, value> * parent);
+	void borrowRight(TreeNode<key, value> * rightNode, TreeNode<key, value> * node, TreeNode<key, value> * parent);
 	void mergeLeft(TreeNode<key, value> * leftNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent);
 	void mergeRight(TreeNode<key, value> * rightNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent);
 	TreeNode<key, value> * getLastTreeNode(unsigned long int totalBlock);
