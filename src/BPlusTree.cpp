@@ -451,14 +451,14 @@ TreeNode<key, value> * BPlusTree<key, value>::getLastTreeNode(unsigned long int 
 }
 
 template<typename key, typename value>
-void BPlusTree<key, value>::borrowLeft(TreeNode<key, value> * leftNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent){
-	//leafNode整体右窜一位,并将left中的数据的最后一项加到leafNode中
-	leafNode->moveRight(leftNode);
+void BPlusTree<key, value>::borrowLeft(TreeNode<key, value> * leftNode, TreeNode<key, value> * node, TreeNode<key, value> * parent){
+	//node整体右窜一位,并将leftNode中的数据的最后一项加到node中
+	node->moveRight(leftNode);
 	//修改parent中的索引
 	//1. 先获取移动后的leafNode的第一项的索引
-	key k = leafNode->getKey(0);
+	key k = node->getKey(0);
 	//2. 将父结点value值为leafNode->getSelf()的项的索引置为k
-	parent->updataKey(k, leafNode->getSelf());
+	parent->updataKey(k, node->getSelf());
 }
 template<typename key, typename value>
 void BPlusTree<key, value>::borrowRight(TreeNode<key, value> * rightNode, TreeNode<key, value> * leafNode, TreeNode<key, value> * parent) {
