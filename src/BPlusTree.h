@@ -105,10 +105,12 @@ public:
 public:
 	void addData(key k, value v);
 	void delData(key k, value v);			//将键值为k的项删除（叶结点）
-	void delInnerData(value v);				//将值为v的项删除
+	key delInnerData(value v);				//将值为v的项删除
 	void addInnerData(key, value);
 	void addRightNodeData(TreeNode<key, value> * rightNode);	//将右边的结点合并到自个身上
-	void addLeftNodeData(TreeNode<key, value> * leftNode, TreeNode<key, value> * leftLeftNode);		//将左边的结点合并到自个身上
+	void addRightNodeData_Inner(TreeNode<key, value> * rightNode, key k);
+	void addLeftNodeData(TreeNode<key, value> * leftNode, TreeNode<key, value> * leftLeftNode);	//将左边的结点合并到自个身上
+	void addLeftNodeData_Inner(TreeNode<key, value> * leftNode, key k);
 	void addFirstInnerData(value left, key k, value right);
 	int binarySearch(key k);
 	unsigned long int getNextChild(key k);
@@ -116,7 +118,8 @@ public:
 	pair<key, value> splitInnetData(TreeNode<key, value> * right);	//非叶结点分裂
 	void moveRight(TreeNode<key, value> * leftNode);				//从左边结点移动一位数据到右边
 	void moveLeft(TreeNode<key, value> * rightNode);				//从右边结点移动一位数据到左边
-	void updataKey(key k, value v);		//将值为v的项的索引置为k
+	void updataKey(key k, value v);									//将值为v的项的索引置为k
+	void updataValue(value v0, value v1);							//将v0改成v1
 private:
 
 public:
